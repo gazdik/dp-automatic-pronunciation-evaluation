@@ -1,0 +1,11 @@
+
+\chapter{Záver} \label{cha:conclusion}
+
+V~tejto diplomovej práci sme sa venovali automatickému hodnoteniu výslovnosti na segmentálnej úrovni a to najmä z~pohľadu detekcie chýb. Bližšie sme sa zamerali na dva prístupy hodnotenia výslovnosti, konkrétne na metódy založené na aposteriórnej pravdepodobnosti foném a metódy priamej klasifikácie pomocou neurónových sietí.
+
+Na základe vykonaných experimentov sme ukázali, že nami navrhnutý systém dosahuje nad použitým nenatívnym datasetom výrazne lepšie výsledky ako referenčná práca, z~ktorej sme vychádzali. Pri vybraných metódach sme sa ďalej pokúšali o~zlepšenie navrhnutého systému multilingválnym trénovaním akustického modelu na niekoľkých rôznych jazykoch. Tento prístup priniesol taktiež významné zlepšenie, avšak výsledná chyba sa nám javila stále pomerne vysoká.
+
+Preto sme na záver práce vykonali bližšiu analýzu výsledkov u~vybranej metódy. Týmto postupom sme zistili, že výsledky automatického hodnotenia sa výrazne líšia v~závislosti na hodnotenej fonéme. To nás viedlo aj na analýzu použitého nenatívneho datasetu, kde sme na jeho podčasti skúmali odlišnosti medzi prepismi pochádzajúcimi od rôznych anotátorov. Takto sme dospeli k~záveru, že dataset trpí v~určitých prípadoch významnou nekonzistenciou, ktorá má nezanedbateľný dopad na dosiahnuté výsledky. Zároveň sme však pri jednej z~foném pozorovali vysokú chybu pri automatickýck hodnoteniach napriek tomu, že anotácie boli pri nej dostatočne konzistenté. Dá sa teda usudzovať, že v~tejto oblasti je priestor na ďalšie zlepšenie.
+
+V~rámci ďalšej práce preto navrhujeme bližšie preskúmať charakter jednotlivých chýb v~nenatívnom datasete. Okrem toho by bolo taktiež vhodné overiť dosiahnuté výsledky aj na nejakom inom nenatívnom datasete s~vyššou konzistenciou anotácii. 
+

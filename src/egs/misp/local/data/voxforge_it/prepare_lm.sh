@@ -1,0 +1,1 @@
+../voxforge_de/prepare_lm.sh

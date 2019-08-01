@@ -1,0 +1,74 @@
+\chapter{Analýza výsledkov} \label{cha:evaluation}
+
+Táto kapitola je zameraná na detailnejšiu analýzu doposiaľ dosiahnutých výsledkov. Našim cieľom je zdôvodniť relatívne vysokú chybu (EER = $25{,}78\,\%$) ktorú dosahujú nami navrhnuté prístupy, a zistiť, či je v~tejto oblasti priestor na potenciálne zlepšenie. 
+
+Analýzu vykonáme nad hodnoteniami výslovnosti určenými vybranou metódou, ktorej EER bola spomedzi ostatných najnižšia. Aby sme lepšie pochopili, čo je dôvodom nesprávneho hodnotenia pri tejto metóde, vyhodnotíme výsledky podľa jednotlivých foném, pri ktorých rečníci najčastejšie chybovali. Na záver podrobíme analýze aj samotný dataset nenatívnej reči, ktorý môže mať významný podiel na výslednej chybe.
+
+\section{Vyhodnotenie výsledkov podľa foném}
+
+Chyby u~nenatívnych rečníkov sa pri niektorých kanonických fonémach vyskytujú častejšie ako u~iných. Zároveň pri rôznych fonémach môžeme pozorovať chyby odlišného charakteru. Je pre to namieste, aby sme sa aj pri vyhodnocovaní detekcie nesprávnej výslovnosti zamerali na jednotlivé fonémy. 
+
+K~tomuto experimentu využijeme LR GOP metódu využívajúcu vierohodnosti HMM stavov, ktoré sú určené multilingválnym (EN\,$\rightarrow$\,DE\,$\rightarrow$\,IT\,$\rightarrow$\,NN-EN) trifónovým akustickým modelom. Rovnako ako v~predchádzajúcej kapitole budeme vyhodnocovať úspešnosť pomocou EER a ROC krivky. 
+
+Výsledky pre päť foném, pri ktorých rečníci v~testovacej sade najviac chybovali, 
+sú uvedené v~tabuľke \ref{tab:eer-per-phoneme} a obrázku \ref{fig:det-per-phone}. 
+Už na prvý pohľad je zrejmé, že úspešnosť pri jednotlivých fonémach je výrazne odlišná. Pri fonéme /\textipa{@}/ je EER na úrovni $34{,}52\,\%$, čo je rozdiel $14{,}01$ percentuálnych bodov oproti fonéme /\textipa{t}/. Tento výsledok je dosť prekvapivý, nakoľko bol v~tomto prípade klasifikátor trénovaný na väčšom množstve dát ako pri fonéme /\textipa{t}/. Príčin takto nízkej úspešnosti môže byť celá rada. My sa domnievame, že najvýznamnejším faktorom môže byť široká variabilita vo výslovnosti fonémy /\textipa{@}/ oproti fonéme /\textipa{t}/. Tá totiž môže spôsovať problematické rozoznanie nesprávnej výslovnosti od správnej. A~to nie len klasifikátorom, ale aj samotnými anotátormi, ktorý zabezpečovali prepis nenatívnej reči. Preto sa v~ďalšej sekcii zameriame na analýzu anotácii v~nenatívnom datasete.
+
+
+\begin{table}[ht!]
+    \centering
+    \begin{tabular}{@{}llll@{}}
+        \toprule
+        \multicolumn{1}{c}{\multirow{2}{*}{Fonéma}} & \multicolumn{2}{c}{Výskyt {[}\%{]}}                                       & \multicolumn{1}{c}{\multirow{2}{*}{EER {[}\%{]}}} \\
+        \multicolumn{1}{c}{}                        & \multicolumn{1}{c}{Testovacia sada} & \multicolumn{1}{c}{Trénovacia sada} & \multicolumn{1}{c}{}                              \\ \midrule
+        \textipa{@}                                          & $13{,}52$                               & $16{,}88$                               & $34{,}52$                                             \\
+        \textipa{I}                                          & $9{,}98$                                & $12{,}79$                               & $34{,}27$                                             \\
+        \textipa{t}                                           & $7{,}84$                                & $4{,}30$                                & $20{,}51$                                             \\
+        \textipa{D}                                          & $6{,}92$                                & $6{,}53$                                & $37{,}21$                                             \\
+        \textipa{r}                                           & $6{,}52$                                & $3{,}58$                                & $32{,}10$                                             \\ \bottomrule
+        \end{tabular}
+    \caption{Výsledky dosiahnuté pre päť najviac chybovaných foném v~testovacej sade pri použití LR GOP metódy s~najlepšími výsledkami.} \label{tab:eer-per-phoneme}
+\end{table}
+
+\begin{figure}[ht!]
+    \centering
+    \input{figures/det-per-phone.tikz}
+    \caption{Graf závislosti FAR a FRR pre päť najviac chybovaných foném v~testovacej sade pri použití LR GOP metódy s~najlepšími výsledkami.} \label{fig:det-per-phone}
+\end{figure}
+
+% \clearpage
+
+\section{Konzistencia anotácii}
+
+Konzistencia anotácii je významným faktorom, ktorý vypovedá o~kvalite datasetu. S~pribúdajúcim množstvom detailov, ktoré sú anotované, dochádza aj k~väčšiemu vzniku chýb. To je aj prípadom fonémového prepisu, kde sa malé odlišnosti medzi fonémami stávajú pre ich krátke trvanie pre človeka ťažko rozoznateľné. Tento problém sa o~to viac prejavuje u~nenatívnej reči, kde je vysoká variabilita vo výslovnosti foném. Na takejto úrovni je preto ťažké stanoviť, či je fonéma ešte správne vyslovená alebo nie. Nekonzistencia sa potom objavuje nielen medzi rôznymi anotátormi, ale aj pri prepisoch od toho istého anotátora.
+
+Za účelom overenia konzistencie ISLE datasetu je časť nahrávok opatrená prepismi od viacerých anotátorov. Keďže všetky prepisy sa do určitej miery líšia, nedokážeme rozhodnúť, aká je referečná anotácia danej nahrávky. Preto budeme uvažovať vždy dvojicu rôznych prepisov, kde prvý z~nich budeme považovať za referenčný a druhý budeme voči nemu porovnávať. Takýmto spôsobom sme schopný určiť všetky druhy chýb ako v~prípade klasifikátora, a teda aj vypočítať hodnoty FAR a FRR pre jednotlivých anotátorov. Pre porovnanie s~výsledkami automatického hodnotenia zanesieme tieto hodnoty do grafu s~ROC krivkou.
+
+Chybu sme vyhodnocovali jednak pre všetky fonémy spoločne, ako aj po jednotlivých fonémach. Celkové výsledky spolu s~tromi najfrekventovanejšími fonémami testovacej sady sa nachádzajú na obrázku \ref{fig:inter-judge}. Ako sme očakávali, konzistentné anotácie na fonémovej úrovni je prakticky nemožné dosiahnuť. 
+Určené hodnoty FAR a FRR majú skôr informatívny charakter a nebudeme sa pokúšať o~ich konkrétnejšiu interpretáciu. Už aj bez toho nám však mnohé napovedajú.  Najmä pri porovnaní chýb u~foném /\textipa{@}/ a /\textipa{t}/ vidíme podobný trend, ako je tomu pri automatických hodnoteniach, kde je taktiež chyba u~fonémy /\textipa{@}/ vyššia ako u~/\textipa{t}/. Je teda dosť pravdepodobné, že vyššia chyba u~automatického hodnotenia je spôsobená práve nekonzistentnými anotáciami. Tie sa totiž na výsledku odrazia hneď niekoľkokrát -- pri trénovaní akustického modelu, potom pri trénovaní klasifikátora výslovnosti a na záver aj pri samotnom vyhodnotení.
+
+K~totožnému záveru sa však nedá dospieť pri fonéme /\textipa{I}/, pri ktorej má nekonzistencia podobný charakter ako pri fonéme /\textipa{t}/, aj tak klasifikátor dosahuje takmer rovnakú chybu, ako pri fonéme /\textipa{@}/. Nekonzistencia anotácii teda zďaleka nebude jediným faktorom, ktorý ovplyvňuje výslednú úspešnosť. Napriek tomu však môžeme konštatovať, že jej vplyv je významný. 
+
+
+\begin{figure}[ht!]
+\centering
+\begin{subfigure}[b]{0.49\textwidth}
+    \resizebox{\textwidth}{!}{\input{figures/roc_inter-judge_total.tex}}
+    \caption{Všetky fonémy}
+\end{subfigure}
+\begin{subfigure}[b]{0.49\textwidth}
+    \resizebox{\textwidth}{!}{\input{figures/roc_inter-judge_ax.tex}}
+    \caption{Fonéma \textipa{/@/}}
+\end{subfigure}
+\par\vspace{2em}
+\begin{subfigure}[b]{0.49\textwidth}
+    \resizebox{\textwidth}{!}{\input{figures/roc_inter-judge_ih.tex}}
+    \caption{Fonéma \textipa{/I/}}
+\end{subfigure}
+\begin{subfigure}[b]{0.49\textwidth}
+    \resizebox{\textwidth}{!}{\input{figures/roc_inter-judge_t.tex}}
+    \caption{Fonéma \textipa{/t/}}
+\end{subfigure}\\
+\caption{FAR a FRR určené po dvojiciach anotátorov, kde anotácie jedného anotátora v~dvojici sú považované za referenčné. Pre porovnanie je taktiež uvedená krivka LR GOP metódy s~najlepšími výsledkami.}
+\label{fig:inter-judge}
+\end{figure}

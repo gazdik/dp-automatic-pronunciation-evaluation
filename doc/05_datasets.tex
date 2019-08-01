@@ -1,0 +1,65 @@
+\chapter{Datasety} \label{cha:datasets}
+
+Táto kapitola sa venuje popisu jednotlivých datasetov reči, ktoré využijeme k~realizácii systému pre detekeciu nesprávnej výslovnosti. K~tomu budeme primárne potrebovať nenatívny dataset reči, ktorého popis je uvedený v~sekcii \ref{sec:isle}. Nakoľko však máme v~pláne aj experimentovanie s~multiligválnymi akustickými modelmi, nezaobídeme sa bez ďalších, tentokrát natívnych datasetov, ktoré sú popísané v~sekciách \ref{sec:timit}\,--\,\ref{sec:voxforge_it}.
+
+\section{ISLE} \label{sec:isle}
+
+ISLE (Interactive Spoken Language Education) dataset \cite{ISLE} bol vytvorený za účelom automatického hodnotenia výslovnosti. Pozostáva z~nahrávok nenatívnej angličtiny, ktoré pochádzajú od 23 talianskych a 23 nemeckých rečníkov. Každý rečník pri nahrávaní čítal krátke úryvky textov, ktoré boli zostavné tak, aby pokrývali širokú škálu bežných výslovnostných chýb. Celkový dĺžka nahrávok je 9 hodín a 27 minút.
+
+Každá nahrávka obsahuje okrem kanonického aj skutočný fonémový prepis s~vyznačenými segmentálnymi a prozodickými chybami. Anotáciu zabezpečovalo niekoľko lingvistov, ktorý sa primárne snažili o~využívanie anglických fonetických symbolov (viď tabuľku \ref{tab:isle-phone-set}). Napriek tomu bolo v~niektorých prípadoch nutné použiť aj fonetické symboly z~iných jazykov. Celkovo tak prepis tvorí 41 anglických foném a 8 foném, ktoré boli prevzaté z~nemčiny alebo taliančiny. 
+
+Hoci bola pri vytváraní datasetu snaha o~rovnomerné zastúpenie rečníkov podľa pohlavia a úrovne angličtiny, nebol tento cieľ úplne naplnený. Výsledné zastúpenie rečníkov je možné nájsť v~tabuľke \ref{tab:speaker-sample}.
+
+\begin{table}[]
+    \centering
+    \begin{tabular}{@{}lll|lll|lll@{}}
+    \toprule
+    Symbol   & IPA & Príklad & Symbol & IPA & Príklad & Symbol & IPA & Príklad \\ \midrule
+    \texttt{aa}  & \textipa{A:}  & b\textbf{al}m    & \texttt{oy}  & \textipa{OI}  & b\textbf{o}y  & \texttt{dh}  & \textipa{D}  & \textbf{th}at    \\
+    \texttt{ae}  & \textipa{\ae} & b\textbf{a}t     & \texttt{uh}  & \textipa{U}   & b\textbf{oo}k & \texttt{th}  & \textipa{T}  & \textbf{th}in    \\
+    \texttt{ah}  & \textipa{2}   & b\textbf{u}t     & \texttt{uw}  & \textipa{u:}  & b\textbf{oo}t & \texttt{f}   & \textipa{f}  & \textbf{f}an     \\
+    \texttt{ao}  & \textipa{O:}  & b\textbf{ou}ght  & \texttt{l}   & \textipa{l}   & \textbf{l}ed  & \texttt{u}   & \textipa{v}  & \textbf{v}an     \\
+    \texttt{aw}  & \textipa{aU}  & b\textbf{ou}t    & \texttt{r}   & \textipa{r}   & \textbf{r}ed  & \texttt{s}   & \textipa{s}  & \textbf{s}ue     \\
+    \texttt{ax}  & \textipa{@}   & \textbf{a}bout   & \texttt{w}   & \textipa{w}   & \textbf{w}ed  & \texttt{sh}  & \textipa{S}  & \textbf{sh}oe    \\
+    \texttt{ay}  & \textipa{aI}  & b\textbf{i}te    & \texttt{y}   & \textipa{j}   & \textbf{y}et  & \texttt{z}   & \textipa{z}  & \textbf{z}oo     \\
+    \texttt{eh}  & \textipa{e}   & b\textbf{e}t     & \texttt{hh}  & \textipa{h}   & \textbf{h}at  & \texttt{zh}  & \textipa{Z}  & mea\textbf{s}ure \\
+    \texttt{er}  & \textipa{3:}  & b\textbf{ir}d    & \texttt{b}   & \textipa{b}   & \textbf{b}et  & \texttt{ch}  & \textipa{tS} & \textbf{ch}eap   \\
+    \texttt{ey}  & \textipa{eI}  & b\textbf{ai}t    & \texttt{d}   & \textipa{d}   & \textbf{d}ebt & \texttt{jh}  & \textipa{dZ} & \textbf{j}eep    \\
+    \texttt{ih}  & \textipa{I}   & b\textbf{i}t     & \texttt{g}   & \textipa{g}   & \textbf{g}et  & \texttt{m}   & \textipa{m}  & \textbf{m}et     \\
+    \texttt{iy}  & \textipa{i:}  & b\textbf{ee}t    & \texttt{k}   & \textipa{k}   & \textbf{c}at  & \texttt{n}   & \textipa{n}  & \textbf{n}et     \\
+    \texttt{oh}  & \textipa{6}   & b\textbf{o}x     & \texttt{p}   & \textipa{p}   & \textbf{p}et  & \texttt{ng}  & \textipa{N}  & thi\textbf{ng}   \\
+    \texttt{ow}  & \textipa{@U}  & b\textbf{oa}t    & \texttt{t}   & \textipa{t}   & \textbf{t}at  &     &              & \\ \bottomrule
+    \end{tabular}
+    \caption{Anglická fonémová sada použitá v~datasete ISLE s~odpovedajúcimi fonetickými symbolmi IPA fonetickej abecedy.} \label{tab:isle-phone-set}
+\end{table}
+
+\begin{table}[]
+\centering
+\begin{tabular}{llllllll}
+\hline
+\multicolumn{1}{c}{} & \multicolumn{2}{c}{Pohlavie}                  & \multicolumn{4}{c}{Úroveň angličtiny}                                                         & \multicolumn{1}{c}{\multirow{2}{*}{Spolu}} \\
+L1                   & \multicolumn{1}{c}{M} & \multicolumn{1}{c}{Ž} & \multicolumn{1}{c}{1} & \multicolumn{1}{c}{2} & \multicolumn{1}{c}{3} & \multicolumn{1}{c}{4} & \multicolumn{1}{c}{}                       \\ \hline
+nemčina              & 13                    & 10                    & -                     & -                     & 8                     & 15                    & 23                                         \\
+taliančina           & 19                    & 4                     & 27                    & 11                    & 4                     & 1                     & 23                                         \\
+Spolu                & 32                    & 14                    & 27                    & 11                    & 12                    & 16                    & 46                                         \\ \hline
+\end{tabular}
+\caption{Zastúpenie rečníkov podľa pohlavia a ich úrovne angličtiny.} \label{tab:speaker-sample}
+\end{table}
+
+
+
+\section{TIMIT} \label{sec:timit}
+
+TIMIT \cite{TIMIT1992}  je korpus pozostávajúci z~nahrávok angličtiny a ich fonetických prepisov. Celkovo sa jedná o~6300 nahrávok s~dĺžkou $5$ hodín a $24$ minút, pričom jeden rečník nahovoril vždy presne 10 nahrávok. Vo všetkých prípadoch sa jedná o~americkú angličtinu. Rečníci pochádzajú z~8 vybraných regiónov, pričom pre každú oblasť je typický určitý dialekt. Nahrávanie prebiehalo v~tichej miestnosti s~jedným typom mikrofónu na frekvencii 16\,kHz a 16 bitovým rozlíšením.
+
+Prepisy sú zostavené zo 61 rôznych foném tzv. TIMITBET abecedy. V~praxi sa však pre rozpoznávanie používa redukovaná abeceda so 48 fonémami, čo bude aj náš prípad.
+
+\section{Voxforge DE} \label{sec:voxforge_de}
+
+Voxforge \cite{Voxforge} je open source projekt zameraný na získanie prepísanej reči, ktorá je potom šírená pod GPL licenciou. Na tvorbe datasetu sa podieľali dobrovoľníci z~niekoľkých krajín, a v~súčasnej dobe je publikovaných 17 datasetov v~rozličných jazykoch. Keďže nahrávanie prebiehalo na rôznych miestach pomocou rôznych zariadení, kvalita nahrávok medzi jednotlivými rečníkmi sa značne líši. Ich správnosť bola ručne validovaná.
+
+Nemecká verzia datasetu pozostáva z~nahrávok od 322 rečníkov s~celkovou dĺžkou 32 hodín a 14 minút. Z~povahy získavania datasetu je možné predpokladať zastúpenie širokého množstva rôznych dialektov nemčiny. To však nie je možné overiť, nakoľko metadáta túto informáciu vo väčšine prípadov neobsahujú. Keďže prepisy sú len na úrovni slov, je nevyhnutné použitie výslovnostného slovníka. My sme použili slovník, ktorý je súčasťou nástroja CMUSphinx\footnote{Výslovnostné slovníky k~nástroju CMUSphinx sú dostupné z~\url{https://sourceforge.net/projects/cmusphinx/files/Acoustic\%20and\%20Language\%20Models/}} a bol zostavený pre použitie s~nemeckým Voxforge datasetom. Keďže však nie je garantované, že obsahuje záznamy o~všetkých slovách v~prepise, na získanie fonémové prepisu neznámych slov využijeme k~tomu určený nástroj \textit{Sequitur G2P} \cite{Bisani2008} natrénovaný nad použitým slovníkom. 
+
+\section{Voxforge IT} \label{sec:voxforge_it}
+
+Taliansky dataset Voxforge pozostáva z~menšieho počtu nahrávok, ktorých dĺžka je v~tomto prípade 19 hodín a 56 minút. Na jeho zostavení sa podieľalo 347 rečníkov. Ako v~predchádzajúcom prípade, nahrávky sú opatrené len slovnými prepismi. K~prevodu na fonémový prepis sme preto opäť využili slovník distribuovaný s~nástrojom CMUSphinx\footnotemark[\value{footnote}], resp. nástroj \textit{Sequitur G2P} na prevod slov, ktoré sa v~slovníku nenachádzajú.

@@ -1,0 +1,1 @@
+../voxforge_de/map_anonymous.sh

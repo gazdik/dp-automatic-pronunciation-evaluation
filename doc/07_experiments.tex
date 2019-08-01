@@ -1,0 +1,256 @@
+\chapter{Experimenty} \label{cha:experiments}
+
+Táto kapitola je venovaná popisu a vyhodnoteniu experimentov navrhnutých za cieľom vyhodnotenia úspešnosti systému popísaného v~predchádzajúcej kapitole. Na začiatok porovnáme výsledky nášho systému s~referenčným článkom, aby sme overili jeho funkčnosť. Následne vyhodnotíme rôzne prístupy hodnotenia výslovnosti vrátane ich modifikácii a vyberieme metódy s~najlepšími výsledkami. Na záver nad vybranými metódami overíme, aký bude mať vplyv použitie akustického modelu trénovaného na viacerých jazykoch na výslednú úspešnosť pri hodnotení výslovnosti.
+
+\section{Spôsob vyhodnotenia experimentov} \label{sec:vyhodnotenie-experimentov}
+
+Pri vyhodnotení experimentov budeme uvažovať len chyby výslovnosti spočívajúce vo vypúšťaní a zámene foném. Na detekciu chýb spôsobených vložením jednej alebo viacerých foném sa totiž používajú odlišné prístupy, napr. rozšírené rozpoznávacie siete (\textit{Extended Recognition Networks}) \cite{Arora2018}. K~určeniu druhu chyby je potrebné porovnať kanonické a skutočné prepisy. 
+
+Úspešnosť uvažovaných metód vyhodnotíme pomocou tzv. miery chybného prijatia (\textit{False Acceptance Rate}, FAR) a miery chybného odmietnutia (\textit{False Rejection Rate}, FRR), kde FAR udáva pomer medzi počtom zle vyslovených foném klasifikovaných ako správne vyslovené k~celkovému počtu zle vyslovených foném a FRR je naopak pomer medzi počtom správne vyslovených foném klasifikovaných ako nesprávne vyslovené k~celkovému počtu správne vyslovených foném. Keďže sa tieto hodnoty líšia v~závislosti na použitom prahu, vykreslíme si ich vzájomnú závislosť. Takto získame graf, ktorý sa zvykne označovať ako ROC krivka. Pre číselné porovnanie metód použijeme tzv. rovnakú mieru chyby (\textit{Equal Error Rate}, ERR), ktorá je rovná hodnote FAR, resp. FRR, keď je FAR a FRR totožné, t.j. $\text{EER} := \text{FAR} = \text{FRR}$.
+
+Výsledky v~prípade použitia neurónovej siete bývajú do určitej miery závislé na jej počiatočnej inicializácii pri trénovaní. Nakoľko v~našom prípade inicializujeme sieť náhodne, je vhodnejšie uvádzať strednú hodnotu spolu s~rozptylom určenú z~niekoľkých klasifikátorov s~rôznou inicializáciou. Toto nám umožní objektívnejšie porovnať rôzne metódy využívajúce neurónové siete. Vo všetkých prípadoch bude táto hodnota určená z~10 klasifikátorov s~náhodnou inicializáciou. Obdobný postup použijeme pri grafoch závislosti FAR a FRR, kde určíme tieto hodnoty zo zpriemerovaných rozhodnutí od všetkých 10 klasifikátorov.
+
+\section{Parametre experimentov}
+
+Navrhnutý systém realizujeme v~toolkite Kaldi \cite{Kaldi}, čo je open-source nástroj vyvinutý k~rozpoznávaniu reči. Napriek tomu, že obsahuje aj natívnu implementáciu neurónových sietí potrebných k~akustickému modelovaniu, rozhodli sa pre ich implementáciu v~nástroji Keras \cite{keras}. Ten totiž podporuje jednoduchšie a flexibilnejšie modifikácie realizovanej neurónovej siete, čo využijeme v~niektorých experimentoch.
+
+\subsection*{Dataset}
+
+K~experimentom využijeme nenatívny dataset ISLE, ktorý rozdelíme na trénovaciu a testovaciu sadu, kde pre každý L1 jazyk v~datasete použijeme nahrávky od 19 rečníkov na trénovanie a 4 rečníkov na testovanie. Ďalej ale už nahrávky podľa jazykov rozlišovať nebudeme, pretože samostatne by na trénovanie nebolo dostatok dát. Rozdelenie datasetu je v~súlade s~referenčnou prácou \cite{Arora2017}, čo nám umožní jednoduché porovnanie dosiahnutých výsledkov. Po rozdelení majú nahrávky v~trénovacej sade dĺžku 8 hodín a 24 minút a v~testovacej sade 1 hodinu a 34 minút. Zoznam rečníkov v~jednotlivých sadách sa nachádza v~tabuľke \ref{tab:train-test-sets}. Pri trénovaní neurónovej siete použijeme aj validačnú sadu, ktorá pozostáva z~troch rečníkov trénovacej sady -- SESS0131, SESS0138 a SESS0186.
+
+Nakoľko nebudeme pri experimentoch uvažovať chyby založené na vkladaní foném, rozšírime kanonický prepis o~vložené fonémy nachádzajúce sa v~skutočnom prepise. Ak by sme tento krok vynechali, nútené zarovnania na kanonický prepis by mohli viesť na segmenty pozostávajúce z~rámcov odpovedajúcich viacerým fonémam.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}l|lllll@{}}
+\toprule
+Testovacia sada & \multicolumn{5}{l}{Trénovacia sada}                  \\ \midrule
+SESS0006        & SESS0012 & SESS0183 & SESS0191 & SESS0126 & SESS0134 \\
+SESS0011        & SESS0021 & SESS0184 & SESS0192 & SESS0127 & SESS0135 \\
+SESS0015        & SESS0161 & SESS0185 & SESS0193 & SESS0128 & SESS0136 \\
+SESS0020        & SESS0162 & SESS0186 & SESS0003 & SESS0129 & SESS0137 \\
+SESS0041        & SESS0163 & SESS0187 & SESS0040 & SESS0130 & SESS0138 \\
+SESS0121        & SESS0164 & SESS0188 & SESS0123 & SESS0131 & SESS0140 \\
+SESS0122        & SESS0181 & SESS0189 & SESS0124 & SESS0132 &          \\
+SESS0139        & SESS0182 & SESS0190 & SESS0125 & SESS0133 &          \\ \bottomrule
+\end{tabular} 
+\caption{Rozdelenie ISLE datasetu na testovaciu a trénovaciu sadu, pričom údaje v~tabuľke predstavujú identifikátory jednotlivých rečníkov.} \label{tab:train-test-sets}
+\end{table}
+
+
+\subsection*{Akustický model} 
+
+Vstupom DNN akustického modelu je 23 fbank príznakov s~kontextom $\pm 5$ rámcov. Príznaky sú pred tým normalizované, aby mali nulovú strednú hodnotu a jednotkový rozptyl. 
+DNN pozostáva z~3 skrytých vrstiev, ktoré sú tvorené 512 neurónmi s~ReLU aktivačnou funckiou. Výstupné neuróny so soft-max prenosovou funkciou určujú pravdepodobnosť stavov monofónneho, resp. trifónneho modelu. Jednotlivé modely zodpovedajú 41 kanonickým fonémam, tichu a nakoniec špeciálne zavedenej fonéme, do ktorej je združených 8 foném pochádzajúcich z~natívneho jazyka rečníkov. % Trifónový model pozostáva zo zlúčených trifónov získaných zhľukovaním pomocou rozhodovacieho stromu. 
+
+Trénovanie prebieha na fonémových zarovnaniach vzhľadom na skutočný prepis. K~zarovnaniu je použitý GMM-HMM model natrénovaný na tých istých dátach. Na vstup GMM-HMM modelu je privedených 39 MFCC+$\Delta$+$\Delta\Delta$ príznakov. DNN je trénovaná s~využitím Adam optimalizátoru nad trénovacími dávkami (mini-batches) o~veľkosti 256 rámcov. Ako objektívna funkcia je zvolená kategorická krížová entropia. K~zabráneniu pretrénovania je použitý 10\,\% dropout. Miera rýchlosti trénovania (\textit{learning rate}) je $0{,}001$ do doby, než sa hodnota objektívnej funkcie na validačnej dátovej sade prestane zlepšovať, maximálne však po dobu 15 epoch. Potom sa s~každou epochou zmenšuje o~polovicu a trénovanie končí, ak sa hodnota objektívnej funkcie nezlepšila počas 10 epoch. 
+
+\subsection*{Určovanie fonologických rysov}
+
+Extrakciu fonologických rysov zabezpečuje DNN s~totožnou topológiou a parametrami ako v~prípade akustického modelu. Jediný rozdiel je vo výstupnej vrstve, ktorá má softmax aktivačnú funkciu, a tvorí ju $19$ neurónov, ktoré odpovedajú fonologickým rysom a tichu. 
+Počas trénovania sa využívajú zarovnania na kanonický prepis získané pomocou monofónového GMM-HMM modelu, ktoré sa prevádzajú na fonologické rysy pomocou tabuľky \ref{tab:phonolog-features-set}.
+
+\subsection*{Priama klasifikácia výslovnosti}
+
+Na priamu klasifikáciu výslovnosti použijeme jednak jednoduchú neurónovú sieť s~dopredným šírením a taktiež rekurentnú neurónovú sieť s~LSTM architektúrou. Jednoduchá neurónová sieť sa skladá z~jedinej skrytej vrstvy, ktorú tvorí $512$ neurónov s~ReLU aktivačnou funkciou. LSTM neurónovú sieť tvorí 512 jednotiek, pričom ich architektúra je v~súlade s~popisom uvedeným v~kapitole \ref{cha:neural-networks}. 
+
+V~závislosti na experimentoch sú na vstup neurónových sieti privádzané logaritmické hodnoty vierohodností HMM stavov, alebo pravdepodobnosti fonologických rysov, normalizované na nulovú strednú hodnotu a jednotkový rozptyl. V~prípade LSTM neurónovej siete tvoria príznakový vektor príznaky určené zo všetkých rámcov uvažovaného segmentu, pričom u~jednoduchej neurónovej siete je vstupom len priemerná hodnota týchto príznakov. Pre obe neurónové siete platí, že aktivačná funkcia výstupnej vrstvy je logistická sigmoida.
+
+Trénovanie prebieha nad segmentmi získanými núteným zarovnaním pomocou GMM-HMM modelu voči kanonickému prepisu. S~trénovania sú vynechané segmenty, ktoré zodpovedajú vloženým fonémam, nakoľko tento druh chýb neuvažujeme. Riadenie trénovania zabezpečuje optimalizačný algoritmus Adam s~veľkosť trénovacej dávky (\textit{mini-batch}) $256$ vzoriek. Objektívnou funkciou je krížová entropia a droput je na úrovni $10\,\%$. Miera rýchlosti trénovania je $0{,}001$ počas prvých troch epoch, potom sa s~každou epochou znižuje o~polovicu. Trénovanie končí, ak sa za posledné 4 epochy nezlepšila hodnota objektívnej funkcie na validačných dátach. 
+
+\section{Porovnanie základných metód s~referenčnou prácou}
+
+Za účeľom overenia funkčnosti nami navrhnutého systému porovnáme dosiahnuté výsledky s~referenčným systémom od Arora a kol. \cite{Arora2017}. Porovnávať budeme trojicu metód postavených na monofónovom akustickom modeli, ktoré boli použité aj v~referenčnej práci. Sú nimi štandardné GOP skóre (STD GOP), dopredná neurónová sieť natrénovaná nad vierohodnosťami HMM stavov (NN HMM) a nakoniec dopredná neurónová sieť rozhodojúca na základe pravdepodobností fonologických rysov (NN PFeats). 
+
+V~prípade metód priamej klasifikácie sme oproti referenčnému systému zaviedli niekoľko zmien. Namiesto strednej kvadratickej chyby v~pri oboch neurónových sieťach využívame kategorickú krížovú entropiu, ktorá je na tento typ problému vhodnejšia. V~dôsledku tohto kroku je možné očakávať mierne lepšie výsledky. Ďalšia zmena spočíva v~inom type použitej neurónovej siete určujúcej fonologické rysy. Sieť použitá v~referenčnom systéme je súčasne trénovaná na dve úlohy -- určovanie fonologických rysov aj HMM stavov. Keďže naša neurónová sieť je trénovaná len na prvej z~nich, dá sa predpokladať, že dosiahneme horší výsledok. Rozdiel by však nemal byť výrazný. Poslednou odlišnosťou je normalizácia príznakov (vierohodností HMM stavov aj pravdepobností fonologických rysov) na nulovú strednú hodnotu a jednotkový rozptyl. Ukázalo sa totiž, že najmä v~prípade nenormovaných vierohodností neurónová sieť horšie konverguje k~riešeniu, alebo dokonca pri použití trifónového modelu nekonverguje vôbec.
+
+Dosiahnuté výsledky je možné v~podobe ROC kriviek vidieť na obrázku \ref{fig:roc-basic-methods} a ich vyjadrenie pomocou miery rovnakej chyby (EER) v~tabuľke \ref{tab:eer-basic-methods}, kde sa zároveň nachádzajú aj výsledky referenčného systému. Hodnoty ukazujú, že nami zostrojený systém je funkčný, aj keď sme pri metóde využívajúcej fonologické rysy dosiahli mierne horší výsledok. To je však v~súlade s~hore uvedeným predpokladom o~vplyve viacúlohového učenia.
+
+Výrazne nižšiu chybu vykázal systém u~GOP skóre a klasifikátora využívajúceho pravdepodobnosti HMM stavov. Pri druhej menovanej metóde bolo zlepšenie až $4{,}23$ percentuálnych bodov. Takýto výrazný rozdiel môže byť spôsobený dvojicou faktorov, a to použitím odlišnej objektívnej funkcie a normalizovaním príznakov. Oboje totiž výrazne prispieva ku konvergencii k~optimálnemu riešeniu, čo nemuselo byť prípadom referenčného systému.
+
+Poslednou metódou, ktorú sme porovnávali, je štandardné GOP skóre. Rozdiel medzi systémami je tentokrát ešte značnejší, so zlepšením na úrovni $5{,}65$ percentuálnych bodov. K~zdôvodneniu takéhoto výsledku nám však v~prípade referenčného systému chýba dostatok informácii. Predpokladáme však, že nimi implementovaný akustický model mohol byť nesprávne optimalizovaný, čo by vysvetlovalo aj výsledok u~NN HMM klasifikátora.
+
+%Aj to však platí len v prípade, keď porovnáme strednú hodnotu určenú z viacerých inštancií klasifikátora. Ak totiž zoberieme v úvahu najlepší dosiahnutý výsledok (EER = $28.20 \%$), tak aj 
+
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{@{}llll@{}}
+    \toprule
+    EER {[}\%{]}                       & STD GOP & NN HMM           & NN PFeats        \\ \midrule
+    Navrhnutý systém                   & $\bm{33{,}35}$ & $\bm{27{,}57} \pm 0{,}16$ & $28{,}49 \pm 0{,}14$ \\
+    Referenčný systém \cite{Arora2017} & $39{,}00$ & $31{,}80$          & $\bm{28{,}30}$          \\ \bottomrule
+    \end{tabular}
+    \caption{Dosiahnuté výsledky pomocou základných metód -- štandardná GOP metóda (STD GOP), neurónové siete klasifikujúce na základe HMM vierohodností (NN HMM) a na základe pravdepodobností fonologických rysov (NN Pfeats).} \label{tab:eer-basic-methods}
+    \end{table}
+
+\begin{figure}[h!]
+    \centering
+    \input{figures/roc-basic-methods.tikz}
+    \caption{Graf závislosti FAR a FRR pre základné metódy -- štandardná GOP metóda (STD GOP), neurónové siete klasifikujúce na základe HMM vierohodností (NN HMM) a pravdepodobností fonologických rysov (NN Pfeats).} \label{fig:roc-basic-methods}
+\end{figure}
+
+% \clearpage
+
+\section{Porovanie metód založených na aposteriórnej pravdepodobnosti foném}
+
+Táto sekcia sa venuje porovnaniu zavedených metód založených na aposteriórnej pravdepodobnosti foném -- štandardného GOP skóre, likelihood ratio GOP skóre (LR GOP) a spriemerovaných aposteriórnych pravdepodobností (AP). Okrem toho sme pri každom uvedenom skúmali, aký vplyv má využitie trifónového akustického modelu na výslednú úspešnosť.
+
+Ako je možné vidieť na obrázku \ref{fig:roc-gop-methods}, nezávisle na akustickom modeli dosiahla najlepšie výsledky LR GOP metóda, a to v~celom skúmanom intervale, t.j. pre ľubovoľnú hodnotu prahu. Naopak najnižšia úspešnosť bola nameraná pri štandardnom GOP skóre. Pri porovnaní EER týchto dvoch metód, viď tab. \ref{tab:eer-gop-methods}, sa výsledok u~monofónového modelu líšil o~$6{,}12$ percentuálnych bodov, čo je až $18{,}35\,\%$ relatívne zlepšenie pre LR GOP. 
+
+Domnievame sa, že za horší výsledok u~štandardného GOP môže fonémové rozpoznávanie, ktoré je používané len pri tejto metóde. Výsledok rozpoznávania je totiž závislý na kvalite jazykového modelu, ktorý nemusí dostatočne pokrývať variabilitu nenatívnej reči, a to aj napriek tomu, že je nad nenatívnym prepisom trénovaný. Zlepšenie jazykového modelu by teda mohlo viesť v~konečnom dôsledku k~priaznivejším výsledkom, to však nie je náplňou tejto práce.
+
+Použitie trifónového akustického modelu neviedlo k~výrazne odlišej chybe. Pri porovnaní EER bolo najväčšie zlepšenie pozorované pri štandardnom GOP skóre na úrovni $1{,}65$ percentuálnych bodov, čo je $4{,}8\,\%$ relatívne zlepšenie. Pri pohľade na graf však vidieť, že to neplatí pre celý interval, a pri hodnote FRR väčšej ako $40\,\%$ je výsledok dokonca horší. Nižšiu chybu v~celom intervale dosiahla len LR GOP metóda, kde sa však EER znížila len o~$0{,}32$ percentuálneho bodu, čiže o~$1{,}1\,\%$.
+
+\begin{figure}[h!]
+    \centering
+    \input{figures/roc-gop-methods.tikz}
+    \caption{Graf závislosti FAR a FRR pre metódy založené na aposteriórnej pravdepodobnosti foném -- štandardné GOP (STD GOP), likelihood-ratio GOP (LR GOP) a spriemerované aposteriórne pravdepodobnosti (AP).} \label{fig:roc-gop-methods}
+\end{figure}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{@{}llll@{}}
+\toprule
+EER {[}\%{]} & STD GOP & LR GOP  & AP \\ \midrule
+Mono AM      & $33{,}35$   & $\bm{27{,}23}$   & $28{,}60$  \\
+Tri AM       & $31{,}74$   & $\bm{26{,}91}$   & $29{,}00$  \\ \bottomrule
+\end{tabular}
+\caption{Výsledky dosiahnuté pomocou štandardnej GOP metódy (STD GOP), modifikácie založenej na počítaní pomeru vierohodností (LR GOP) a spriemerovanými aposteriórnými pravdepodobnostiami (AP).} \label{tab:eer-gop-methods}
+\end{table} 
+
+\section{Porovnanie metód založených na priamej klasifikácii}
+
+Obdobným spôsobom porovnáme rôzne metódy založené na priamej klasifikácii. Okrem dopredných neurónových sietí využívajúcich ako príznaky vierohodnosti HMM stavov (NN HMM) a pravdepobnosti fonologických rysov (NN PFeats) sa zameriame aj na použitie LSTM neurónových sietí nad rovnakými príznakmi (LSTM HMM, resp. LSTM PFeats). Pri klasifikátoroch pracujúcich s~fonologickými rysmi využijeme len monofónový akustický model, nakoľko v~tomto prípade slúži len na získanie nútených zarovnaní, ktoré sú pri trifónovom modeli takmer totožné.
+
+Pri klasifikácii pomocou LSTM je možné očakávať mierne lepšie výsledky, nakoľko takáto neurónová sieť pracuje so všetkými rámcami daného segmentu. V~prípade jednoduchej neurónovej siete je totiž tieto príznaky nutné spriemerovať, čím môže dôjsť k~strate dôležitej informácie o~kontexte.
+
+Už pri prvom pohľade na graf \ref{fig:roc-classifiers} je vidieť, že klasifikátory pracujúce s~vierohodnosťami HMM stavov dosahujú nezanedbateľne lepšie výsledky ako je tomu pri klasifikátoroch založených na pravdepodobnostiach fonologických rysov. EER medzi NN HMM a NN PFeats metódami sa líši o~$0{,}92$ percentuálnych bodov, čo predstavuje zlepšenie o~$3{,}2\,\%$ pri NN HMM klasifikátore. Takýto záver však nie je veľkým prekvapením. V~prvom rade totiž vierohodností HMM stavov majú značne väčšiu dimenziu (150 vs. 19), takže sa dá očakávať, že nesú aj viacej informácie. Okrem toho sa môže veľké množstvo informácie stratiť už pri trénovaní neurónovej siete určujúcej fonologické rysy. Pri ňom sa totiž fonologické rysy stanovujú pomocou tabuľky prevodom z~fonémového prepisu. Takýto prevod ale môže zaniesť do trénovania veľa chýb daných variabilitou reči. Napokon takýto prevod je len lineárnou funkciou, ktorú sa môže naučiť aj samotná neurónová sieť stanovujúca HMM stavy. To dokazuje aj práca od Nagamine a kol. \cite{Nagamine2015}, ktorá vizuálizáciou ukázala, že v~skrytých vrstvách DNN akustického modelu sa formujú skupiny neurónov, ktoré pripomínajú fonologické rysy.
+
+Očakávané zlepšenie sme pri použití LSTM nedosiahli. Pri oboch druhoch príznakov tento typ klasifikátora vykázal horšie výsledky ako jednoduchá neurónová sieť. Najmä v~prípade fonologických rysov bola EER o~$1{,}8$ percentuálnych bodov vyššia než pri jednoduchej neurónovej sieti, čo znamená relatívne zhoršenie o~$6{,}32\,\%$. Príčinou je zrejme nepomer v~počte parametrov LSTM modelu a veľkosti trénovacej sady. V~porovnaní s~jednoduchou neurónovou sieťou je totiž počet parametrov násobne vyšší (406\,058 vs. 44\,074 pri monofónovom AM, 2\,215\,466 vs. 496\,426 pri trifónovom AM). 
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{@{}lllll@{}}
+    \toprule
+    EER {[}\%{]} & NN HMM        & LSTM HMM & NN PFeats          & LSTM PFeats \\ \midrule
+    Mono AM      & $\bm{27{,}57} \pm 0{,}16$ & $27{,}99 \pm 0{,}24$  & $28{,}49 \pm 0{,}14$      & $30{,}29 \pm 0{,}10$           \\
+    Tri AM       & $\bm{27{,}06} \pm 0{,}18$ & $28{,}00 \pm 0{,}12$        & -       & -           \\ \bottomrule
+    \end{tabular}
+    \label{tab:eer-classifiers}
+    \caption{Výsledky dosiahnuté metódami založenými na priamej klasifikácii pomocou neurónových sietí (NN), resp. LSTM neurónových sietí, ktoré boli trénované na vierohodnostiach HMM stavov (NN HMM, resp. LSTM HMM), a na pravdepodobnostiach fonologických rysov (NN PFeats, resp. LSTM PFeats).}
+\end{table}
+
+\begin{figure}[h!]
+    \centering
+    \input{figures/roc-nn-methods.tikz}
+    \caption{Graf závislosti FAR a FRR pre metódy založené na priamej klasifikáci pomocou neurónových sietí (NN), resp. LSTM neurónových sietí, ktoré boli trénované na vierohodnostiach HMM stavov (NN HMM, resp. LSTM HMM), a na pravdepodobnostiach fonologických rysov (NN PFeats, resp. LSTM PFeats).} \label{fig:roc-classifiers}
+\end{figure}
+
+% \clearpage
+
+\section{Porovnanie GOP skóre a priamej klasifikácie}
+
+Na záver si porovnáme najúspešnejšie metódy z~oboch prístupov, a to likelihood ratio (LR) GOP skóre a doprednú neurónovú sieť s~HMM príznakmi na vstupe (NN HMM).
+
+Výsledky pre obe metódy je možné vidieť v~tabuľke \ref{tab:eer-gop-vs-classifier} a obrázku \ref{fig:roc-gop-vs-classifier}. Hodnoty EER sa pri jednotlivých metódach líšia len nepatrne, s~rozdielom $0{,}34$, resp. $0{,}15$, percentuálnych bodov u~monofónového, resp. trifónového, modelu. Najmä druhá hodnota je dokonca nižšia, ako je štandardná odchýlka pri NN HMM. Pohľadom na ROC krivku zároveň zistíme, že žiadna z~metód nedosahuje lepšie výsledky v~celom intervale.
+
+Tieto výsledky naznačujú, že použitím klasifikátora nie sme schopný zužitkovať z~vierohodností HMM stavov viacej informácie, ako pri výrazne jednoduchšej LR GOP metóde, ktorá na detekciu nesprávnej výslovnosti využíva vierohodnosti odpovedajúce len 2 fonémam. Toto je však pozitívne zistenie, a to hneď z~niekoľkých dôvodov. Prvým z~nich je nízka výpočetná náročnosť LR GOP skóre, nakoľko celá detekcia spočíva len vo výpočte jednoduchého vzťahu, ktorý ani nevyžaduje fonémové rozpoznávanie, ako v~prípade štandardného GOP. Okrem toho ale táto metóda striktne nevyžaduje vierohodnosti určené nenatívnym akustickým modelom. Namiesto neho postačuje model natrénovaný nad natívnym datasetom, ktorý nie je tak náročný na obstaranie. Pri jeho použití však môže drasticky klesnúť úspešnosť, preto je skôr vhodnejšie použitie kombinácie oboch datasetov, kde sa teraz už výrazne menší nenatívny dataset využije len k~adaptácii.
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{@{}lll@{}}
+    \toprule
+    EER {[}\%{]} & LR GOP  & NN HMM  \\ \midrule
+    Mono AM      & $\bm{27{,}23}$ & $27{,}57 \pm 0{,}16$  \\
+    Tri AM       & $\bm{26{,}91}$ & $27{,}06 \pm 0{,}18$  \\ \bottomrule
+    \end{tabular}
+    \caption{Výsledky dosiahnuté najúspešnejšími metódami z~každej kategórie -- likelihood-ratio GOP (LR GOP) a jednoduchá neurónová sieť s~HMM príznakmi (NN HMM).} \label{tab:eer-gop-vs-classifier}
+    \end{table}
+
+\begin{figure}[h!]
+    \centering
+    \input{figures/roc-gop-vs-nn.tikz}
+    \caption{Graf závislosti FAR a FRR pre najúspešnejšie metódy z~každej kategórie -- likelihood-ratio GOP (LR GOP) a jednoduchej neurónovej siete (NN HMM).}
+    \label{fig:roc-gop-vs-classifier}
+\end{figure}
+
+% \clearpage
+
+\section{Multilingválne akustické modely}
+
+Pri metódach, ktoré používajú k~detekcii nesprávnej výslovnosti vierohodnosti HMM stavov, sa kvalita akustického modelu priamo odráža na výslednej úspešnosti. Ako sme už spomenuli v~predchádzaúcej kapitole, jednou z~možností zlepšenia akustického modelu je multilingválne trénovanie. S~ohľadom na to, že nenatívny dataset pozostáva z~rečníkov s~nemeckým a talianským materinským jazykom, použijeme k~trénovaniu multilingválneho akustického modelu celkovo 4 datasety -- anglický (EN), nemecký (DE), taliansky (IT) a na koniec samotný dataset nenatívnej angličtiny (NN-EN).
+
+Multilingválny akustický model zkonštruujeme pomocou sekvenčného spôsobu trénovania, ktorý bol popísaný v~predchádzajúcej kapitole. Nakoľko má poradie jazykov pri tomto prístupe významný vplyv na kvalitu výsledného modelu, vyhodnotíme niekoľko modelov natrénovaných v~rôznom poradí. Vo všetkých scenároch bude vždy použitá ako posledná nenatívna angličtina, nakoľko na nej bude prebiehať detekcia nesprávnej výslovnosti.
+
+Topológia DNN a parametre trénovania budú totožné s~monolingválnym akustickým modelom. Pre získanie zarovnaní sú použité monolingválne  GMM-HMM modely. Uvažovať zároveň budeme monofónové aj trifónové akustické modely.
+
+\subsection{Porovnanie modelov na základe chyby pri rozpoznávaní}
+
+Ešte pred použitím zostrojených multilingválnych akustických modelov na detekciu nesprávnej výslovnosti vykonáme ich porovnanie vyhodnotením chyby rozpoznávania na úrovni foném, ktorá sa ozačuje aj ako \textit{Phone Error Rate} (PER), ktorá je daná ako 
+
+\begin{equation}
+    \text{PER} = \frac{S~+ D + I}{N_T},
+\end{equation}
+
+\noindent kde $N_T$ je celkový počet foném v~prepise a $S$, $D$ a $I$ sú počty chýb spôsobených substitúciou, vypustením alebo vložením foném. Tie získame porovnaním rozpoznaných foném so skutočným prepisom nenatívneho datasetu.
+
+Výsledky pre jednotlivé akustické modely sa nachádzajú v~tabuľke \ref{tab:per-multilingval-acoustic-models}. V~prípade monofónových aj trifónových akustických modelov dosiahli najnižšiu chybu modely trénované na sekvencii jazykov EN\,$\rightarrow$\,DE\,$\rightarrow$\,IT\,$\rightarrow$\,NN-EN. Pri porovovaní s~monolingválnymi akustickými modelmi ide o~zlepšenie na úrovni $1{,}7$ percentuálnych bodov, resp. $3$ percentuálnych bodov u~trifónového modelu. 
+
+V~súlade s~očakávaniami je chyba pri použití trifónových akustických modelov výrazne nižšia. Za povšimnutie stojí, že už len trénovanie na ľubovoľnej dvojici jazykov viedlo k~podstatnému zlepšeniu pri rozpoznávaní reči.  
+
+% Ak však porovnáme celkové poradia pri monofónových a trifónových modeloch, zistíme, že niekedy 
+% Zároveň rozdiely medzi jednotlivými akustickými modelmi nie sú také výrazné, čo je jednak spôsobené nižšou počiatočnou chybou, ale zároveň na to môže mať vplyv charakter trifónových modelov, kde môže byť obtiažnejšie zdieľanie znalostí medzi dvoma neurónovými sieťami. 
+% Najlepšie výsledky dosiahol model trénovaný nad \dots. (Varianta A) Tento výsledok naznačuje, že poradie jazykov nie je jediným faktorom, ktorý ovplyvňuje výsledný model. (Varianta B) Tento výsledok naznačuje, že poradie jazykov je kľúčovým faktorov na dosiahnutý výsledok, a druh použitého modelu na výsledok nemá zásadný vplyv. (Varianta C) Tento výsledok naznačuje, že poradie jazykov by mohlo byť kľúčovým faktorom na dosiahnutý výsledok. Pri detailnejšom porovnaní výsledkov monofónových a trifónových modelov však zistíme, že pri niektorých jazykoch je poradie výsledkov odlišné.
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{@{}lcc@{}}
+    \toprule
+    Jazyky  & \begin{tabular}[c]{@{}c@{}}Mono\\ PER (\%)\end{tabular} & \begin{tabular}[c]{@{}c@{}}Tri1\\ PER (\%)\end{tabular} \\ \midrule
+    NN-EN        & $42{,}4$    & $35{,}7$    \\
+    EN\,$\rightarrow$\,NN-EN  & $41{,}8$ & $34{,}9$ \\
+    DE\,$\rightarrow$\,NN-EN  & $41{,}3$ & $34{,}1$ \\
+    IT\,$\rightarrow$\,NN-EN  & $41{,}7$ & $33{,}5$ \\
+    EN\,$\rightarrow$\,DE\,$\rightarrow$\,NN-EN  & $41{,}6$ & $33{,}7$ \\
+    EN\,$\rightarrow$\,IT\,$\rightarrow$\,NN-EN  & $41{,}2$ & $33{,}7$ \\
+    EN\,$\rightarrow$\,DE\,$\rightarrow$\,IT\,$\rightarrow$\,NN-EN & $\bm{40{,}7}$ & $\bm{32{,}7}$ \\
+    EN\,$\rightarrow$\,IT\,$\rightarrow$\,DE\,$\rightarrow$\,NN-EN & $40{,}9$ & $33{,}5$ \\ \bottomrule
+    \end{tabular} 
+    \caption{Výsledky rozpoznávania pri použití akustického modelu trénovanom len na nenatívnej reči v~porovnaní s~multilingválnymi akustickými modelmi.} \label{tab:per-multilingval-acoustic-models}
+\end{table}
+
+% \clearpage
+
+\subsection{Vplyv na detekeciu nesprávnej výslovnosti}
+
+V~rámci tejto sekcie vyhodnotíme vplyv, ktorý má použitie multilingválneho akustického modelu na detekciu nesprávnej výslovnosti. Za týmto účeľom použijeme metódy, ktoré dosiahli v~predchádzajúcich experimentoch najlepšie výsledky, t.j. likelihood-ratio (LR) GOP a doprednú neurónovú sieť s~HMM príznakmi na vstupe (NN HMM). Vyhodnocovať budeme vplyv monofónového aj trifónového multilingválneho akustického modelu. Porovnanie vykonáme s~referenčnými výsledkami získanými pri monolingválnom akustickom modeli, ktorý však bol pri tomto experimente reinicializovaný, takže aj jeho výsledky sa mierne líšia.
+
+Ako vidieť v~tabuľke \ref{tab:mono-vs-multi-am}, použitie multilingválneho AM viedlo vždy aspoň k~nepatrnému zlepšeniu EER. Najväčšie zlepšenie sme zaznamenali pri monofónovom NN HMM, ktorého najlepší výsledok je o~$5{,}11\,\%$ lepší než pri monolingválnom AM. Celkovo najnižšiu EER, $25{,}78\,\%$ dosiahla monofónová LR GOP metóda, čo predstavuje zlepšenie o~$4{,}2\,\%$ oproti monolingválnemu systému. 
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{@{}lllll@{}}
+    \toprule
+    EER {[}\%{]} & Mono LR GOP  & Tri LR GOP & Mono NN HMM  & Tri NN HMM \\ \midrule
+    NN-EN & $27{,}75$ & $26{,}91$ & $27{,}57 \pm 0{,}13$ & $27{,}58 \pm 0{,}22$ \\
+    EN\,$\rightarrow$\,NN-EN  & $27{,}27$ & $26{,}35$ & $27{,}32 \pm 0{,}10$ & $27{,}35 \pm 0{,}29$ \\ 
+    DE\,$\rightarrow$\,NN-EN  & $\bm{26{,}55}$ & $26{,}63$ & $27{,}10 \pm 0{,}07$ & $27{,}42 \pm 0{,}19$ \\ 
+    IT\,$\rightarrow$\,NN-EN  & $26{,}71$ & $26{,}35$ & $\bm{26{,}16} \pm 0{,}16$ & $27{,}06 \pm 0{,}13$ \\ 
+    EN\,$\rightarrow$\,DE\,$\rightarrow$\,NN-EN & $\bm{26{,}55}$ & $26{,}43$ & $26{,}56 \pm 0{,}13$ & $26{,}98 \pm 0{,}21$ \\
+    EN\,$\rightarrow$\,IT\,$\rightarrow$\,NN-EN & $26{,}83$ & $26{,}47$ & $26{,}77 \pm 0{,}15$ & $27{,}26 \pm 0{,}04$ \\
+    EN\,$\rightarrow$\,DE\,$\rightarrow$\,IT\,$\rightarrow$NN-EN & $\bm{26{,}55}$ & $\bm{25{,}78}$ & $27{,}16 \pm 0{,}11$ & $\bm{26{,}76} \pm 0{,}19$ \\
+    EN\,$\rightarrow$\,IT\,$\rightarrow$\,DE\,$\rightarrow$NN-EN & $26{,}67$ & $26{,}31$ & $26{,}64 \pm 0{,}09$ & $26{,}89 \pm 0{,}25$ \\
+    \bottomrule
+    \end{tabular}
+    \caption{Porovnanie výsledkov pri použití monolingválneho vs. multilingválneho akustického modelu.} \label{tab:mono-vs-multi-am}
+\end{table}
+
+% \noindent \textbf{TODO} Nie som si istý, či zase uvádzať graf. Najmä v tomto prípade sú tie rozdiely dosť minimálne, takže by tam ani nebolo nič užitočné vidieť.
+
+\section{Zhrnutie výsledkov}
+
+V~tejto kapitole sme vykonali celú radu experimentov s~cieľom nájsť najvhodnejšiu metódu na detekciu nesprávnej výslovnosti. Skúmali sme dve kategórie techník, ktoré sa za týmto účeľom používajú. Podarilo sa nám takto určiť dvojicu metód, LR GOP a NN HMM, ktoré dosahujú najlepších, navzájom podobných, výsledkov. 
+
+\noindent Nad týmito vybranými metódami sme sa ďalej pokúšali o~ich zlepšenie využitím multilingválneho trénovania akustických modelov. V~prípade najlepšieho výsledku sa nám podarilo dosiahnúť zníženie EER v~porovnaní s~referenčnou prácou o~$2{,}52$ percentuálnych bodov, čo predstavuje $8{,}9\,\%$ zlepšenie. Dosahujeme toho pri tom LR GOP metódou, ktorá je výrazne jednoduchšia na implementáciu, než metóda dosahujúca najlepší výsledok v~referenčnom systéme. Výsledná chyba sa nám však javí stále vysoká, preto sa v~ďalšej kapitole budeme venovať bližšej analýze dosiahnutých výsledkov.
+ % a pokúsime sa rozhodnúť, či ešte existuje priestor na ďalšie zlepšenie.
